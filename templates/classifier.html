@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% set active_page = "classifier" %}
+{% block title %} Classifier {% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <img id="frame" src="data:image/png;base64, {{ image }}"></img>
+            <canvas id="frame_canvas" width="512" height="512"></canvas>
+        </div>
+        <div class="col">
+          <div class="d-grid col-6 mx-auto">
+            <button class="btn btn-primary" type="button" id="b1" style="background-color: #e4e4e4; color: #000000;">Snow</button><p></p>
+            <button class="btn btn-primary" type="button" id="b2" style="background-color: #adadad;">Gray Ice</button><p></p>
+            <button class="btn btn-primary" type="button" id="b3" style="background-color: #00888d;">Bright Melt Pond</button><p></p>
+            <button class="btn btn-primary" type="button" id="b4" style="background-color: #008a8f;">Submerged Ice</button><p></p>
+            <button class="btn btn-primary" type="button" id="b5" style="background-color: #002724;">Dark Melt Pond</button><p></p>
+            <button class="btn btn-primary" type="button" id="b6" style="background-color: #000000;">Ocean</button><p></p>
+            <button class="btn btn-primary" type="button" id="b99" style="background-color: #610000;">I Don't Know</button><p></p>
+          </div>
+        </div>
+    </div>
+</div>
+
+<script src="static/jQuery-3.6.0.js" defer></script>
+<script src="static/script.js" defer></script>
+<script src="static/draw.js" defer></script>
+
+{% endblock %}
