@@ -19,16 +19,16 @@ function post_data(data) {
     });
 }
 
-function get_preset() {
+function get_preset(data) {
   $.ajax({
     type: "GET",
     url: "/get_preset",
     data: JSON.stringify(data),
-    contentType: "application/json",
     dataType: 'json',
     success: function(result) {
       console.log("Result:");
       console.log(result);
+      draw_target_fixed(result.x, result.y);
     } 
   });
 }
@@ -37,7 +37,7 @@ function next_target() {
     if(Math.random() > 0.5){
       draw_target_random(512);
     } else {
-      draw_target_fixed(0, 0);
+      get_preset(100);
     }
   // 
 }

@@ -7,7 +7,7 @@ function draw_target_fixed(x, y){
     global_x = x
     global_y = y
 
-    draw(x, y, 50, clear=true);
+    draw(x, y, 50, '#ff0000', true);
     draw(x, y, 2);
 }
 
@@ -20,12 +20,12 @@ function draw_target_random(width){
     global_x = x
     global_y = y
 
-    draw(x, y, 50, clear=true);
+    draw(x, y, 50, '#00ff00', true);
     draw(x, y, 2);
 }
 
 
-function draw(x, y, s, clear=false){
+function draw(x, y, s, color='#0000ff', clear=false){
     var img = document.getElementById("frame");
     var cnvs = document.getElementById("frame_canvas");
     
@@ -42,7 +42,7 @@ function draw(x, y, s, clear=false){
     ctx.beginPath();
     ctx.arc(x, y, s, 0, 2 * Math.PI, false);
     ctx.lineWidth = 3;
-    ctx.strokeStyle = '#00ff00';
+    ctx.strokeStyle = color; //'#00ff00';
     //ctx.globalAlpha = 0.5
     ctx.stroke();
 }

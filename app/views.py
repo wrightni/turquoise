@@ -1,9 +1,11 @@
+from app import app
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_caching import Cache
 import base64
 import io
 import json
+import collections
 from PIL import Image
 from osgeo import gdal
 import pandas as pd
@@ -11,7 +13,7 @@ import numpy as np
 
 from datetime import datetime, timedelta
 
-app = Flask(__name__)
+# app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -20,35 +22,55 @@ db = SQLAlchemy(app)
 cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})
 cache.init_app(app)
 
-
 class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(128))
-    validations = db.relationship('Validation', backref='author', lazy='dynamic')
+    validations = db.relationship('Points', backref='author', lazy='dynamic')
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
 
 
+class Points(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    point_id = db.Column(db.Integer, db.ForeignKey('validation.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    clsf = db.Column(db.Text)
+
+    def __repr__(self):
+        return '<ID {}>'.format(self.id)
+
 class Validation(db.Model):
     # Database for storing training / validation data
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     # image_id
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    image_id = db.Column(db.Text)
+    image_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     image_x = db.Column(db.Integer)
     image_y = db.Column(db.Integer)
     date = db.Column(db.DateTime)
     lat = db.Column(db.Float)
     lon = db.Column(db.Float)
-    clsf = db.Column(db.Text) # Classificaiton value
     
     def __repr__(self):
         return '<ID {}>'.format(self.id)
 
+
+class Images(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    image_name = db.Column(db.Text)
+
+    def __repr__(self):
+        return '<Name {}>'.format(self.image_name)
+
+
+db.create_all()
+db.session.commit()
+print("created")
 
 @app.route("/")
 @app.route("/overview")
@@ -66,6 +88,17 @@ def classifier():
 
     cache.set("window_ul", window_ul)
 
+    val_existing = Validation.query.filter(Validation.image_id == 1, 
+                                           Validation.image_x.between(window_ul[0], window_ul[0]+512),
+                                           Validation.image_y.between(window_ul[1], window_ul[1]+512))
+
+    preset_deque = collections.deque([(v.image_x - window_ul[0], v.image_y - window_ul[1]) for v in val_existing])
+
+    ##for val in val_existing:
+     #   preset_deque.append((val.))
+
+    cache.set("preset_deque", preset_deque)
+
     return render_template(
         'classifier.html', image=encoded_img_data.decode('utf-8')
     ).encode(encoding='UTF-8')
@@ -75,7 +108,7 @@ def classifier():
 def assign():
 
     user_id = 0
-    image_id = 'test'
+    image_id = 1
 
     # Get the window location to place the assigned value in the global image coordinates
     window_ul = cache.get("window_ul")
@@ -87,10 +120,26 @@ def assign():
     abs_x = window_ul[0] + window_x
     abs_y = window_ul[1] + window_y
 
-    new_point = Validation(user_id=user_id, image_id=image_id, 
-                           image_x=abs_x, image_y=abs_y, 
-                           date=datetime.utcnow(), lat=90, lon=180, 
-                           clsf=jsdata['clsf'])
+    # check if point exists in Validation
+    exists = Validation.query.filter_by(image_id=image_id, image_x=abs_x, image_y=abs_y).first()
+    if not exists:
+        new_valpt = Validation(image_id=image_id, 
+                            image_x=abs_x, image_y=abs_y, 
+                            date=datetime.utcnow(), lat=90, lon=180, 
+                            )
+        db.session.add(new_valpt)
+        #db.session.commit()
+        db.session.flush()
+        # this gets assigned when the insert is commited above
+        #point_id = new_valpt.id
+        point_id = new_valpt.id
+    else:
+        point_id = exists.id
+
+    print(point_id)
+    # add new point to Points
+    new_point = Points(user_id=user_id, point_id=point_id, clsf=jsdata['clsf'])
+
     db.session.add(new_point)
     db.session.commit()
  
@@ -98,11 +147,25 @@ def assign():
     return jsonify(results)
 
 
+@app.route("/get_preset", methods=['GET'])
+def get_preset():
+    
+    preset_deque = cache.get("preset_deque")
+
+    x, y = preset_deque.popleft()
+
+    cache.set("preset_deque", preset_deque)
+
+    print(preset_deque)
+
+    return jsonify({'x': x, 'y': y})
+
+
 def load_image():
 
     DISPLAY_SIZE = int(512)
 
-    ds = gdal.Open('static/2016_07_19_02134.JPG', gdal.GA_ReadOnly)
+    ds = gdal.Open('app/static/2016_07_19_02134.JPG', gdal.GA_ReadOnly)
 
     x_dim = ds.RasterXSize
     y_dim = ds.RasterYSize
@@ -138,6 +201,7 @@ def load_image():
 
     encoded_img_data = base64.b64encode(file_object.getvalue())
 
+    # for saving lat/lon information
     proj = ds.GetProjection()
     gt = ds.GetGeoTransform()
 

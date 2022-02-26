@@ -18,7 +18,10 @@ RUN apt-get update && apt-get install -y \
 RUN python3 -m pip install -r requirements.txt
 
 WORKDIR /app
-COPY . /app
+COPY ./app /app
+
+ENV STATIC_URL /static
+ENV STATIC_PATH ./app/static
 
 # Switching to a non-root user, please refer to https://aka.ms/vscode-docker-python-user-rights
 RUN useradd appuser && chown -R appuser /app
