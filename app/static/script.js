@@ -28,7 +28,11 @@ function get_preset(data) {
     success: function(result) {
       console.log("Result:");
       console.log(result);
-      draw_target_fixed(result.x, result.y);
+      if (result.success == true){
+        draw_target_fixed(result.x, result.y);
+      } else {
+        draw_target_random(512);
+      };
     } 
   });
 }
@@ -38,7 +42,7 @@ function next_target() {
       draw_target_random(512);
     } else {
       get_preset(100);
-    }
+    };
   // 
 }
 

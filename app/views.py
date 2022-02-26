@@ -152,13 +152,18 @@ def get_preset():
     
     preset_deque = cache.get("preset_deque")
 
-    x, y = preset_deque.popleft()
-
-    cache.set("preset_deque", preset_deque)
+    try:
+        x, y = preset_deque.popleft()
+    except IndexError:
+        x, y = 0, 0
+        success = False
+    else:
+        cache.set("preset_deque", preset_deque)
+        success = True
 
     print(preset_deque)
 
-    return jsonify({'x': x, 'y': y})
+    return jsonify({'success': success, 'x': x, 'y': y})
 
 
 def load_image():
